@@ -3,18 +3,42 @@ import { createClient } from '@supabase/supabase-js';
 // ------------------------------------------------------------------
 // CONFIGURATION
 // ------------------------------------------------------------------
-// Opció A (Ajánlott): Használj .env fájlt ezekkel a változókkal:
-// SUPABASE_URL=https://your-project.supabase.co
-// SUPABASE_ANON_KEY=your-long-key-string
-//
-// Opció B (Gyors): Másold be közvetlenül ide a stringeket a '...' közé.
+// A process.env változók akkor működnek, ha be vannak állítva a build környezetben.
+// Ha nincsenek, a kód a fallback értékeket használná.
+// Mivel a 'YOUR_SUPABASE_URL_HERE' nem érvényes URL, a createClient hibát dobna.
+// Ezért validáljuk az URL-t létrehozás előtt.
 // ------------------------------------------------------------------
 
-const supabaseUrl = process.env.SUPABASE_URL || 'YOUR_SUPABASE_URL_HERE';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY_HERE';
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
 
-if (supabaseUrl === 'YOUR_SUPABASE_URL_HERE') {
-    console.warn('⚠️ Supabase URL nincs beállítva! Kérlek frissítsd a lib/supabaseClient.ts fájlt.');
+// Ellenőrizzük, hogy az URL érvényes formátumú-e
+const isValidUrl = (url: string) => {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
+const isConfigured = isValidUrl(supabaseUrl) && supabaseAnonKey.length > 0;
+
+if (!isConfigured) {
+  console.warn('⚠️ Supabase credentials not found or invalid. Leaderboard will be disabled (mocked). Check lib/supabaseClient.ts');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Ha van érvényes konfig, létrehozzuk az igazi klienst.
+// Ha nincs, egy "mock" objektumot adunk vissza, ami imitálja a működést, hogy ne omoljon össze a játék.
+export const supabase = isConfigured 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : {
+      from: (table: string) => ({
+        select: (columns: string) => ({
+          order: (column: string, opts: any) => ({
+            limit: (count: number) => Promise.resolve({ data: [], error: null }),
+          }),
+        }),
+        insert: (data: any) => Promise.resolve({ data: null, error: null }),
+      }),
+    } as any;
