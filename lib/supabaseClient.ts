@@ -1,20 +1,48 @@
 import { createClient } from '@supabase/supabase-js';
 
 // ------------------------------------------------------------------
-// CONFIGURATION
+// ⚠️ FONTOS BEÁLLÍTÁS / IMPORTANT CONFIG
 // ------------------------------------------------------------------
-// A process.env változók akkor működnek, ha be vannak állítva a build környezetben.
-// Ha nincsenek, a kód a fallback értékeket használná.
-// Mivel a 'YOUR_SUPABASE_URL_HERE' nem érvényes URL, a createClient hibát dobna.
-// Ezért validáljuk az URL-t létrehozás előtt.
+// Mivel a környezeti változók (process.env) nem mindig jutnak el a böngészőhöz,
+// a legbiztosabb, ha ide másolod be közvetlenül az adatokat.
+//
+// 1. Töröld ki az üres stringet ("").
+// 2. Másold be a Supabase URL-t és az ANON KEY-t az idézőjelek közé.
 // ------------------------------------------------------------------
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+const MANUAL_SUPABASE_URL = ""; 
+// Pl: "https://wkkeyyrknmnynlcefugq.supabase.co"
 
-// Ellenőrizzük, hogy az URL érvényes formátumú-e
+const MANUAL_SUPABASE_ANON_KEY = ""; 
+// Pl: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+// ------------------------------------------------------------------
+
+// Segédfüggvény a környezeti változók biztonságos olvasására (ha mégis működnének)
+const getEnvVar = (key: string) => {
+  try {
+    // Node/Webpack stílus
+    if (typeof process !== 'undefined' && process.env && process.env[key]) {
+      return process.env[key];
+    }
+    // Vite stílus
+    if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env[key]) {
+      return (import.meta as any).env[key];
+    }
+  } catch (e) {
+    return '';
+  }
+  return '';
+};
+
+// Prioritás: 1. Manuális (hardcoded) 2. Környezeti változó
+const supabaseUrl = MANUAL_SUPABASE_URL || getEnvVar('SUPABASE_URL') || '';
+const supabaseAnonKey = MANUAL_SUPABASE_ANON_KEY || getEnvVar('SUPABASE_ANON_KEY') || '';
+
+// URL Validáció
 const isValidUrl = (url: string) => {
   try {
+    if (!url) return false;
     const parsed = new URL(url);
     return parsed.protocol === 'http:' || parsed.protocol === 'https:';
   } catch {
@@ -22,25 +50,26 @@ const isValidUrl = (url: string) => {
   }
 };
 
-const isConfigured = isValidUrl(supabaseUrl) && supabaseAnonKey.length > 0;
+const isConfigured = isValidUrl(supabaseUrl) && supabaseAnonKey.length > 20;
 
 if (!isConfigured) {
-  console.warn('⚠️ Supabase credentials not found or invalid. Leaderboard will be disabled (mocked). Check lib/supabaseClient.ts');
+  console.log('%c⚠️ SUPABASE HIBA', 'color: red; font-size: 20px; font-weight: bold;');
+  console.log('A leaderboard OFFLINE módban van.');
+  console.log('Kérlek töltsd ki a MANUAL_SUPABASE_URL és MANUAL_SUPABASE_ANON_KEY változókat a lib/supabaseClient.ts fájlban!');
 }
 
 export const isSupabaseConfigured = isConfigured;
 
-// Ha van érvényes konfig, létrehozzuk az igazi klienst.
-// Ha nincs, egy "mock" objektumot adunk vissza, ami imitálja a működést, hogy ne omoljon össze a játék.
+// Kliens létrehozása vagy Mockolása
 export const supabase = isConfigured 
   ? createClient(supabaseUrl, supabaseAnonKey)
   : {
-      from: (table: string) => ({
-        select: (columns: string) => ({
-          order: (column: string, opts: any) => ({
-            limit: (count: number) => Promise.resolve({ data: [], error: null }),
+      from: () => ({
+        select: () => ({
+          order: () => ({
+            limit: () => Promise.resolve({ data: [], error: null }),
           }),
         }),
-        insert: (data: any) => Promise.resolve({ data: null, error: null }),
+        insert: () => Promise.resolve({ data: null, error: { message: "Supabase credentials missing in lib/supabaseClient.ts" } }),
       }),
     } as any;
