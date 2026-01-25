@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button98 } from '../ui/Button98';
+import { supabase } from '../../lib/supabaseClient';
 
 interface GameObject {
   x: number;
@@ -18,6 +19,12 @@ interface Particle {
   color: string;
 }
 
+interface LeaderboardEntry {
+  username: string;
+  score: number;
+  created_at: string;
+}
+
 export const PenguinGameContent: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -26,6 +33,12 @@ export const PenguinGameContent: React.FC = () => {
   const [showGameOverScreen, setShowGameOverScreen] = useState(false);
   const [scoreDisplay, setScoreDisplay] = useState(0);
   const [highScore, setHighScore] = useState(0);
+  
+  // Leaderboard State
+  const [username, setUsername] = useState('');
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Game Logic State
   const gameState = useRef({
@@ -44,11 +57,51 @@ export const PenguinGameContent: React.FC = () => {
   const keysPressed = useRef<Set<string>>(new Set());
   const frameId = useRef<number>(0);
 
-  // Load High Score
+  // Load High Score from local storage (backup)
   useEffect(() => {
     const saved = localStorage.getItem('penguin_highscore');
     if (saved) setHighScore(parseInt(saved));
+    const savedUser = localStorage.getItem('penguin_username');
+    if (savedUser) setUsername(savedUser);
+    
+    fetchLeaderboard();
   }, []);
+
+  const fetchLeaderboard = async () => {
+    setIsLoadingLeaderboard(true);
+    try {
+        const { data, error } = await supabase
+            .from('leaderboard')
+            .select('username, score, created_at')
+            .order('score', { ascending: false })
+            .limit(10);
+            
+        if (data) {
+            setLeaderboard(data);
+        }
+    } catch (err) {
+        console.error("Error fetching leaderboard", err);
+    } finally {
+        setIsLoadingLeaderboard(false);
+    }
+  };
+
+  const submitScore = async (finalScore: number) => {
+    if (!username || finalScore === 0) return;
+    
+    setIsSubmitting(true);
+    try {
+        await supabase.from('leaderboard').insert([
+            { username: username, score: finalScore }
+        ]);
+        // Refresh leaderboard after submission
+        await fetchLeaderboard();
+    } catch (err) {
+        console.error("Error submitting score", err);
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
 
   // --- Input Handlers ---
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -75,6 +128,14 @@ export const PenguinGameContent: React.FC = () => {
   };
 
   const startGame = () => {
+    if (!username.trim()) {
+        alert("Please enter your Twitter username (@username) to play!");
+        return;
+    }
+    
+    // Save username for next time
+    localStorage.setItem('penguin_username', username);
+
     gameState.current = {
       isPlaying: true,
       gameOver: false,
@@ -258,13 +319,13 @@ export const PenguinGameContent: React.FC = () => {
     gameState.current.gameOver = true;
     setShowGameOverScreen(true);
     
-    if (gameState.current.score > highScore) {
-        setHighScore(gameState.current.score);
-        localStorage.setItem('penguin_highscore', gameState.current.score.toString());
+    const finalScore = gameState.current.score;
+
+    if (finalScore > highScore) {
+        setHighScore(finalScore);
+        localStorage.setItem('penguin_highscore', finalScore.toString());
     }
 
-    if (frameId.current) cancelAnimationFrame(frameId.current);
-    
     // Draw one last frame to show collision
     const canvas = canvasRef.current;
     if(canvas) {
@@ -274,6 +335,9 @@ export const PenguinGameContent: React.FC = () => {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
     }
+
+    // Submit score to Supabase
+    submitScore(finalScore);
   };
 
   useEffect(() => {
@@ -294,14 +358,44 @@ export const PenguinGameContent: React.FC = () => {
         
         {/* Start Screen */}
         {showStartScreen && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 text-white z-10 backdrop-blur-sm p-4 text-center">
-            <h2 className="text-4xl font-bold mb-2 font-['VT323'] text-[#00ffff] drop-shadow-md tracking-widest">PENGUIN RUSH</h2>
-            <div className="mb-6 space-y-2 text-lg font-mono">
-                <p>High Score: {highScore}</p>
+          <div className="absolute inset-0 flex flex-col items-center bg-black/80 text-white z-10 backdrop-blur-sm p-4 overflow-y-auto custom-scrollbar">
+            <h2 className="text-4xl font-bold mb-2 font-['VT323'] text-[#00ffff] drop-shadow-md tracking-widest shrink-0">PENGUIN RUSH</h2>
+            
+            <div className="w-full max-w-[280px] mb-4 shrink-0">
+                <label className="block text-xs mb-1 text-gray-300">Twitter Username (@...):</label>
+                <input 
+                    type="text" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="@elonmusk"
+                    className="w-full bg-white text-black font-mono px-2 py-1 border-2 border-inset border-gray-600 focus:outline-none"
+                    maxLength={20}
+                />
             </div>
-            <Button98 onClick={startGame} className="animate-pulse scale-110 px-6 py-2">START GAME</Button98>
-            <div className="mt-8 text-sm text-gray-300 font-mono">
-                <p>⬅️ Move Left | Move Right ➡️</p>
+
+            <Button98 onClick={startGame} className="animate-pulse scale-105 px-6 py-2 mb-4 shrink-0">START GAME</Button98>
+
+            {/* Leaderboard Table */}
+            <div className="w-full bg-[#000080] border-2 border-white p-2">
+                <h3 className="text-center text-yellow-300 font-bold mb-2 border-b border-white pb-1">🏆 TOP 10 PENGUINS 🏆</h3>
+                {isLoadingLeaderboard ? (
+                    <div className="text-center text-sm">Loading...</div>
+                ) : (
+                    <table className="w-full text-sm font-mono">
+                        <tbody>
+                            {leaderboard.map((entry, idx) => (
+                                <tr key={idx} className={idx % 2 === 0 ? 'bg-white/10' : ''}>
+                                    <td className="px-1 w-6">{idx + 1}.</td>
+                                    <td className="px-1 text-left truncate max-w-[120px]">{entry.username}</td>
+                                    <td className="px-1 text-right text-yellow-200">{entry.score}</td>
+                                </tr>
+                            ))}
+                            {leaderboard.length === 0 && (
+                                <tr><td colSpan={3} className="text-center py-2">No scores yet. Be the first!</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                )}
             </div>
           </div>
         )}
@@ -312,11 +406,14 @@ export const PenguinGameContent: React.FC = () => {
             <h2 className="text-5xl font-bold mb-4 text-red-500 bg-black px-4 py-1 border-2 border-white font-['VT323']">GAME OVER</h2>
             <div className="text-center mb-6 font-mono">
                 <p className="text-xl">Score: {scoreDisplay}</p>
-                {scoreDisplay >= highScore && scoreDisplay > 0 && (
-                    <p className="text-yellow-400 font-bold animate-bounce mt-2">✨ NEW HIGH SCORE! ✨</p>
-                )}
+                {isSubmitting && <p className="text-sm animate-pulse text-yellow-300">Saving score...</p>}
+                {!isSubmitting && <p className="text-xs text-gray-300 mt-2">Score saved for {username}!</p>}
             </div>
-            <Button98 onClick={startGame}>TRY AGAIN</Button98>
+            <Button98 onClick={() => {
+                setShowGameOverScreen(false);
+                setShowStartScreen(true); // Go back to start to see leaderboard
+                fetchLeaderboard();
+            }}>MAIN MENU</Button98>
           </div>
         )}
       </div>
