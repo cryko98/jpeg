@@ -114,8 +114,8 @@ export const PaintContent: React.FC = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const link = document.createElement('a');
-    link.download = 'my-penguin-art.png';
-    link.href = canvas.toDataURL();
+    link.download = 'my-penguin-art.jpeg';
+    link.href = canvas.toDataURL('image/jpeg', 0.9);
     link.click();
   };
 

@@ -263,7 +263,7 @@ const App: React.FC = () => {
             items={windows.map(w => ({ 
               id: w.id, 
               label: w.title, 
-              icon: typeof w.icon === 'string' ? w.icon : '📄' 
+              icon: w.icon || '📄' 
             }))}
         />
       </div>
