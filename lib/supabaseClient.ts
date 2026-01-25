@@ -28,6 +28,8 @@ if (!isConfigured) {
   console.warn('⚠️ Supabase credentials not found or invalid. Leaderboard will be disabled (mocked). Check lib/supabaseClient.ts');
 }
 
+export const isSupabaseConfigured = isConfigured;
+
 // Ha van érvényes konfig, létrehozzuk az igazi klienst.
 // Ha nincs, egy "mock" objektumot adunk vissza, ami imitálja a működést, hogy ne omoljon össze a játék.
 export const supabase = isConfigured 

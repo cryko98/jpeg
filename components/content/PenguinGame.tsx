@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button98 } from '../ui/Button98';
-import { supabase } from '../../lib/supabaseClient';
+import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
 
 interface GameObject {
   x: number;
@@ -33,12 +33,21 @@ export const PenguinGameContent: React.FC = () => {
   const [showGameOverScreen, setShowGameOverScreen] = useState(false);
   const [scoreDisplay, setScoreDisplay] = useState(0);
   const [highScore, setHighScore] = useState(0);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   
   // Leaderboard State
   const [username, setUsername] = useState('');
+  // Use a ref for username to ensure access inside closures (game loop)
+  const usernameRef = useRef('');
+  
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Sync username state to ref
+  useEffect(() => {
+    usernameRef.current = username;
+  }, [username]);
 
   // Game Logic State
   const gameState = useRef({
@@ -76,28 +85,49 @@ export const PenguinGameContent: React.FC = () => {
             .order('score', { ascending: false })
             .limit(10);
             
-        if (data) {
+        if (error) {
+            console.error("Error fetching leaderboard:", error);
+        } else if (data) {
             setLeaderboard(data);
         }
     } catch (err) {
-        console.error("Error fetching leaderboard", err);
+        console.error("Exception fetching leaderboard:", err);
     } finally {
         setIsLoadingLeaderboard(false);
     }
   };
 
   const submitScore = async (finalScore: number) => {
-    if (!username || finalScore === 0) return;
+    const currentUsername = usernameRef.current;
+    if (!currentUsername || finalScore === 0) return;
     
     setIsSubmitting(true);
+    setSubmitError(null);
+
+    // If mock mode, pretend to save
+    if (!isSupabaseConfigured) {
+        setTimeout(() => {
+            setIsSubmitting(false);
+            setSubmitError("Offline Mode: Score not saved online.");
+        }, 1000);
+        return;
+    }
+
     try {
-        await supabase.from('leaderboard').insert([
-            { username: username, score: finalScore }
+        const { error } = await supabase.from('leaderboard').insert([
+            { username: currentUsername, score: finalScore }
         ]);
-        // Refresh leaderboard after submission
-        await fetchLeaderboard();
-    } catch (err) {
-        console.error("Error submitting score", err);
+
+        if (error) {
+            console.error("Supabase insert error:", error);
+            setSubmitError(error.message || "Failed to save score.");
+        } else {
+            // Refresh leaderboard after submission
+            await fetchLeaderboard();
+        }
+    } catch (err: any) {
+        console.error("Error submitting score:", err);
+        setSubmitError(err.message || "Unexpected error.");
     } finally {
         setIsSubmitting(false);
     }
@@ -151,6 +181,7 @@ export const PenguinGameContent: React.FC = () => {
     setShowStartScreen(false);
     setShowGameOverScreen(false);
     setScoreDisplay(0);
+    setSubmitError(null);
 
     if (frameId.current) cancelAnimationFrame(frameId.current);
     gameLoop();
@@ -377,7 +408,10 @@ export const PenguinGameContent: React.FC = () => {
 
             {/* Leaderboard Table */}
             <div className="w-full bg-[#000080] border-2 border-white p-2">
-                <h3 className="text-center text-yellow-300 font-bold mb-2 border-b border-white pb-1">🏆 TOP 10 PENGUINS 🏆</h3>
+                <h3 className="text-center text-yellow-300 font-bold mb-2 border-b border-white pb-1 flex justify-between items-center">
+                    <span>🏆 TOP 10</span>
+                    {!isSupabaseConfigured && <span className="text-xs text-red-300 bg-red-900 px-1 blink">OFFLINE</span>}
+                </h3>
                 {isLoadingLeaderboard ? (
                     <div className="text-center text-sm">Loading...</div>
                 ) : (
@@ -391,7 +425,9 @@ export const PenguinGameContent: React.FC = () => {
                                 </tr>
                             ))}
                             {leaderboard.length === 0 && (
-                                <tr><td colSpan={3} className="text-center py-2">No scores yet. Be the first!</td></tr>
+                                <tr><td colSpan={3} className="text-center py-2 text-gray-400">
+                                    {isSupabaseConfigured ? "No scores yet." : "Connect Supabase to see scores."}
+                                </td></tr>
                             )}
                         </tbody>
                     </table>
@@ -407,7 +443,13 @@ export const PenguinGameContent: React.FC = () => {
             <div className="text-center mb-6 font-mono">
                 <p className="text-xl">Score: {scoreDisplay}</p>
                 {isSubmitting && <p className="text-sm animate-pulse text-yellow-300">Saving score...</p>}
-                {!isSubmitting && <p className="text-xs text-gray-300 mt-2">Score saved for {username}!</p>}
+                {!isSubmitting && !submitError && <p className="text-xs text-gray-300 mt-2">Score saved for {username}!</p>}
+                {submitError && (
+                    <div className="mt-2 bg-black border border-red-500 p-2">
+                        <p className="text-xs text-red-300 font-bold">ERROR SAVING SCORE:</p>
+                        <p className="text-xs text-red-200">{submitError}</p>
+                    </div>
+                )}
             </div>
             <Button98 onClick={() => {
                 setShowGameOverScreen(false);
