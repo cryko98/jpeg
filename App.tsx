@@ -10,6 +10,7 @@ import { GalleryContent } from './components/content/Gallery';
 import { DexScreenerEmbed } from './components/content/DexScreenerEmbed';
 import { PaintContent } from './components/content/Paint';
 import { HowToBuyContent } from './components/content/HowToBuy';
+import { PenguinGameContent } from './components/content/PenguinGame';
 
 // App Logo
 const PENGUIN_LOGO = "https://pbs.twimg.com/media/G_gCwofXsAAZ5lk?format=jpg&name=medium";
@@ -27,6 +28,18 @@ const INITIAL_WINDOWS: WindowState[] = [
     height: 500,
     icon: <img src={PENGUIN_LOGO} alt="icon" className="w-4 h-4 object-cover" />,
     content: <AboutContent />
+  },
+  {
+    id: 'game',
+    title: 'Penguin_Rush.exe',
+    isOpen: false,
+    isMinimized: false,
+    zIndex: 7,
+    position: { x: 250, y: 100 },
+    width: 400,
+    height: 550,
+    icon: '🎮',
+    content: <PenguinGameContent />
   },
   {
     id: 'wallet',
@@ -153,6 +166,12 @@ const App: React.FC = () => {
           onDoubleClick={() => handleWindowAction('OPEN', 'welcome')} 
         />
         
+        <DesktopIcon 
+          label="Penguin Rush" 
+          icon="🎮" 
+          onDoubleClick={() => handleWindowAction('OPEN', 'game')} 
+        />
+
         <DesktopIcon 
           label="DexScreener" 
           icon={<div className="text-[14px] bg-black text-white w-full h-full flex items-center justify-center font-bold rounded-sm border border-gray-500">DEX</div>}
