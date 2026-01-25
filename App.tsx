@@ -6,9 +6,10 @@ import { DesktopIcon } from './components/DesktopIcon';
 import { WindowState, Position, APP_CONSTANTS } from './types';
 import { AboutContent } from './components/content/About';
 import { WalletContent } from './components/content/Wallet';
-import { ChartContent } from './components/content/Chart';
 import { GalleryContent } from './components/content/Gallery';
 import { DexScreenerEmbed } from './components/content/DexScreenerEmbed';
+import { PaintContent } from './components/content/Paint';
+import { HowToBuyContent } from './components/content/HowToBuy';
 
 // App Logo
 const PENGUIN_LOGO = "https://pbs.twimg.com/media/G_gCwofXsAAZ5lk?format=jpg&name=medium";
@@ -40,16 +41,16 @@ const INITIAL_WINDOWS: WindowState[] = [
     content: <WalletContent />
   },
   {
-    id: 'chart',
-    title: 'Stonks.xls',
+    id: 'howtobuy',
+    title: 'How_to_buy.txt',
     isOpen: false,
     isMinimized: false,
     zIndex: 3,
-    position: { x: 300, y: 100 },
+    position: { x: 100, y: 100 },
     width: 500,
     height: 500,
-    icon: '📊',
-    content: <ChartContent />
+    icon: '📝',
+    content: <HowToBuyContent />
   },
   {
     id: 'gallery',
@@ -74,6 +75,18 @@ const INITIAL_WINDOWS: WindowState[] = [
     height: 500,
     icon: '🦅',
     content: <DexScreenerEmbed />
+  },
+  {
+    id: 'paint',
+    title: 'Paint.exe',
+    isOpen: false,
+    isMinimized: false,
+    zIndex: 6,
+    position: { x: 120, y: 60 },
+    width: 700,
+    height: 550,
+    icon: '🎨',
+    content: <PaintContent />
   }
 ];
 
@@ -133,7 +146,7 @@ const App: React.FC = () => {
          onClick={() => setIsStartOpen(false)}>
       
       {/* Desktop Icons */}
-      <div className="absolute top-4 left-4 flex flex-col gap-6 z-0">
+      <div className="absolute top-4 left-4 flex flex-col gap-6 z-0 flex-wrap h-[calc(100vh-60px)] content-start">
         <DesktopIcon 
           label="My Computer" 
           icon={<img src={PENGUIN_LOGO} alt="icon" className="w-full h-full object-cover" />}
@@ -142,20 +155,26 @@ const App: React.FC = () => {
         
         <DesktopIcon 
           label="DexScreener" 
-          icon={<div className="text-[10px] bg-black text-white w-full h-full flex items-center justify-center font-bold rounded-sm border border-gray-500">DEX</div>}
+          icon={<div className="text-[14px] bg-black text-white w-full h-full flex items-center justify-center font-bold rounded-sm border border-gray-500">DEX</div>}
           onDoubleClick={() => handleWindowAction('OPEN', 'dexscreener')} 
         />
 
         <DesktopIcon 
-          label="Buy Now" 
+          label="How to Buy" 
+          icon="💊" 
+          onDoubleClick={() => handleWindowAction('OPEN', 'howtobuy')} 
+        />
+
+        <DesktopIcon 
+          label="MS Paint" 
+          icon="🎨" 
+          onDoubleClick={() => handleWindowAction('OPEN', 'paint')} 
+        />
+
+        <DesktopIcon 
+          label="Wallet" 
           icon="💰" 
           onDoubleClick={() => handleWindowAction('OPEN', 'wallet')} 
-        />
-        
-        <DesktopIcon 
-          label="Tokenomics" 
-          icon="📊" 
-          onDoubleClick={() => handleWindowAction('OPEN', 'chart')} 
         />
         
         <DesktopIcon 
@@ -167,15 +186,7 @@ const App: React.FC = () => {
         <a href="https://x.com/i/communities/2015347338366366056" target="_blank" rel="noreferrer">
              <DesktopIcon 
             label="Community" 
-            icon={<div className="text-3xl font-bold font-mono">𝕏</div>}
-            onDoubleClick={() => {}} 
-            />
-        </a>
-        
-         <a href="https://telegram.org" target="_blank" rel="noreferrer">
-             <DesktopIcon 
-            label="Telegram" 
-            icon="✈️" 
+            icon={<div className="text-5xl font-bold font-mono">𝕏</div>}
             onDoubleClick={() => {}} 
             />
         </a>
