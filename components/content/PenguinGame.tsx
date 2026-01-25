@@ -6,65 +6,105 @@ interface GameObject {
   y: number;
   type: 'fish' | 'rock';
   id: number;
+  drift: number; // Horizontal movement
+}
+
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  color: string;
 }
 
 export const PenguinGameContent: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // UI State (for rendering React overlays only)
+  // UI State
   const [showStartScreen, setShowStartScreen] = useState(true);
   const [showGameOverScreen, setShowGameOverScreen] = useState(false);
   const [scoreDisplay, setScoreDisplay] = useState(0);
+  const [highScore, setHighScore] = useState(0);
 
-  // Game Logic State (Refs used for mutable game state to avoid stale closures in animation loop)
+  // Game Logic State
   const gameState = useRef({
     isPlaying: false,
     gameOver: false,
     score: 0,
-    penguinX: 175, // Center of 350px canvas
+    penguinX: 175,
+    penguinVel: 0,
     objects: [] as GameObject[],
-    lastSpawnTime: 0
+    particles: [] as Particle[],
+    lastSpawnTime: 0,
+    difficultyMultiplier: 1
   });
 
+  // Input State (Set of currently pressed keys)
+  const keysPressed = useRef<Set<string>>(new Set());
   const frameId = useRef<number>(0);
 
-  // Input Handling - Attached to window to catch key presses anywhere
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!gameState.current.isPlaying || gameState.current.gameOver) return;
+  // Load High Score
+  useEffect(() => {
+    const saved = localStorage.getItem('penguin_highscore');
+    if (saved) setHighScore(parseInt(saved));
+  }, []);
 
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      gameState.current.penguinX = Math.max(20, gameState.current.penguinX - 25);
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      gameState.current.penguinX = Math.min(330, gameState.current.penguinX + 25);
-    }
+  // --- Input Handlers ---
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    keysPressed.current.add(e.key);
+  }, []);
+
+  const handleKeyUp = useCallback((e: KeyboardEvent) => {
+    keysPressed.current.delete(e.key);
   }, []);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [handleKeyDown, handleKeyUp]);
+
+  // Mobile Input Helpers
+  const setInput = (key: string, pressed: boolean) => {
+    if (pressed) keysPressed.current.add(key);
+    else keysPressed.current.delete(key);
+  };
 
   const startGame = () => {
-    // Reset Game State immediately
     gameState.current = {
       isPlaying: true,
       gameOver: false,
       score: 0,
       penguinX: 175,
+      penguinVel: 0,
       objects: [],
-      lastSpawnTime: Date.now()
+      particles: [],
+      lastSpawnTime: Date.now(),
+      difficultyMultiplier: 1
     };
 
-    // Update UI
     setShowStartScreen(false);
     setShowGameOverScreen(false);
     setScoreDisplay(0);
 
-    // Cancel any existing loop and start new one
     if (frameId.current) cancelAnimationFrame(frameId.current);
     gameLoop();
+  };
+
+  const createParticles = (x: number, y: number, color: string) => {
+    for (let i = 0; i < 8; i++) {
+      gameState.current.particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 5,
+        vy: (Math.random() - 0.5) * 5,
+        life: 20 + Math.random() * 10,
+        color
+      });
+    }
   };
 
   const gameLoop = () => {
@@ -75,83 +115,141 @@ export const PenguinGameContent: React.FC = () => {
 
     const state = gameState.current;
 
-    // If game stopped, do not animate
     if (!state.isPlaying || state.gameOver) return;
 
-    // --- GAME LOGIC ---
+    // --- 1. UPDATE PHYSICS ---
 
+    // Movement Logic (Smooth sliding)
+    const moveSpeed = 6;
+    let dx = 0;
+    
+    if (keysPressed.current.has('ArrowLeft')) dx -= moveSpeed;
+    if (keysPressed.current.has('ArrowRight')) dx += moveSpeed;
+
+    state.penguinX += dx;
+    
+    // Clamp to screen
+    if (state.penguinX < 20) state.penguinX = 20;
+    if (state.penguinX > canvas.width - 20) state.penguinX = canvas.width - 20;
+
+    // Difficulty ramp up
+    state.difficultyMultiplier = 1 + (state.score * 0.002);
+
+    // Spawning
     const now = Date.now();
-    // Spawn rate: gets faster as score increases (capped at 400ms)
-    const spawnRate = Math.max(400, 1000 - (state.score * 15)); 
+    const spawnRate = Math.max(300, 1000 / state.difficultyMultiplier);
     
     if (now - state.lastSpawnTime > spawnRate) {
       state.objects.push({
-        x: Math.random() * (canvas.width - 30),
+        x: Math.random() * (canvas.width - 40) + 20,
         y: -30,
-        type: Math.random() > 0.3 ? 'fish' : 'rock', // 70% chance fish
-        id: now
+        type: Math.random() > 0.35 ? 'fish' : 'rock',
+        id: now,
+        drift: (Math.random() - 0.5) * (state.difficultyMultiplier * 0.5) // Random drift
       });
       state.lastSpawnTime = now;
     }
 
-    // Move Objects: Speed increases with score
-    const currentSpeed = 3 + (state.score * 0.1);
-    
-    // Collision Detection Loop
+    // Update Objects
+    const fallSpeed = 3 * state.difficultyMultiplier;
+
     for (let i = state.objects.length - 1; i >= 0; i--) {
         const obj = state.objects[i];
-        obj.y += currentSpeed;
+        obj.y += fallSpeed;
+        obj.x += obj.drift;
 
-        // Hitbox check
-        // Penguin is drawn at (state.penguinX, canvas.height - 20) roughly
-        // We check if object is near the bottom and within horizontal range
-        if (obj.y > canvas.height - 60 && obj.y < canvas.height - 5) {
-            // Horizontal distance check (30px radius)
-            if (Math.abs(obj.x - state.penguinX) < 35) {
-                if (obj.type === 'rock') {
-                    endGame();
-                    return; // Stop the loop immediately
-                } else {
-                    // Collect Fish
-                    state.score += 10;
-                    setScoreDisplay(state.score); // Sync React UI
-                    state.objects.splice(i, 1); // Remove fish
-                    continue;
-                }
-            }
+        // Bounce off walls (drift)
+        if (obj.x < 10 || obj.x > canvas.width - 10) obj.drift *= -1;
+
+        // Collision Check
+        // Penguin Hitbox: approx 40x40 center bottom
+        const hitDist = 30; // forgiving hitbox
+        const distY = Math.abs(obj.y - (canvas.height - 20));
+        const distX = Math.abs(obj.x - state.penguinX);
+
+        if (distY < 30 && distX < hitDist) {
+             if (obj.type === 'rock') {
+                 createParticles(state.penguinX, canvas.height - 20, '#FF0000');
+                 endGame();
+                 return;
+             } else {
+                 // Caught Fish
+                 state.score += 10;
+                 setScoreDisplay(state.score);
+                 createParticles(obj.x, obj.y, '#FFD700'); // Gold particles
+                 state.objects.splice(i, 1);
+                 continue;
+             }
         }
 
-        // Remove off-screen objects
-        if (obj.y > canvas.height) {
-            state.objects.splice(i, 1);
-        }
+        if (obj.y > canvas.height) state.objects.splice(i, 1);
     }
 
-    // --- RENDER ---
+    // Update Particles
+    for (let i = state.particles.length - 1; i >= 0; i--) {
+        const p = state.particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        if (p.life <= 0) state.particles.splice(i, 1);
+    }
+
+    // --- 2. RENDER ---
     
-    // 1. Clear Screen
-    ctx.fillStyle = '#87CEEB'; // Sky Blue
+    // Sky
+    ctx.fillStyle = '#87CEEB';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 2. Draw Ground
+    // Mountains (Background decor)
+    ctx.fillStyle = '#E0F7FA';
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height);
+    ctx.lineTo(100, canvas.height - 100);
+    ctx.lineTo(200, canvas.height);
+    ctx.moveTo(150, canvas.height);
+    ctx.lineTo(250, canvas.height - 150);
+    ctx.lineTo(350, canvas.height);
+    ctx.fill();
+
+    // Ground
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
 
-    // 3. Draw Penguin
+    // Penguin
+    ctx.save();
+    ctx.translate(state.penguinX, canvas.height - 15);
+    // Tilt effect based on movement
+    const tilt = dx * 0.05; 
+    ctx.rotate(tilt);
     ctx.font = "40px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    ctx.fillText("🐧", state.penguinX, canvas.height - 10);
+    ctx.fillText("🐧", 0, 0);
+    ctx.restore();
 
-    // 4. Draw Objects
-    ctx.textAlign = "left"; // Reset for objects
-    ctx.textBaseline = "alphabetic";
+    // Objects
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     ctx.font = "30px Arial";
     state.objects.forEach(obj => {
         ctx.fillText(obj.type === 'fish' ? "🐟" : "🪨", obj.x, obj.y);
     });
 
-    // 5. Request Next Frame
+    // Particles
+    state.particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 4, 4);
+    });
+
+    // Score HUD
+    ctx.fillStyle = "black";
+    ctx.font = "bold 20px Courier New";
+    ctx.textAlign = "left";
+    ctx.fillText(`SCORE: ${state.score}`, 10, 30);
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#555";
+    ctx.fillText(`HI: ${Math.max(state.score, highScore)}`, canvas.width - 10, 30);
+
     frameId.current = requestAnimationFrame(gameLoop);
   };
 
@@ -159,79 +257,93 @@ export const PenguinGameContent: React.FC = () => {
     gameState.current.isPlaying = false;
     gameState.current.gameOver = true;
     setShowGameOverScreen(true);
+    
+    if (gameState.current.score > highScore) {
+        setHighScore(gameState.current.score);
+        localStorage.setItem('penguin_highscore', gameState.current.score.toString());
+    }
+
     if (frameId.current) cancelAnimationFrame(frameId.current);
+    
+    // Draw one last frame to show collision
+    const canvas = canvasRef.current;
+    if(canvas) {
+        const ctx = canvas.getContext('2d');
+        if(ctx) {
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    }
   };
 
-  // Cleanup on unmount
   useEffect(() => {
       return () => {
           if (frameId.current) cancelAnimationFrame(frameId.current);
       };
   }, []);
-  
-  // Mobile Controls Wrappers
-  const moveLeft = () => {
-      if (!gameState.current.isPlaying) return;
-      gameState.current.penguinX = Math.max(20, gameState.current.penguinX - 25);
-  };
-  
-  const moveRight = () => {
-      if (!gameState.current.isPlaying) return;
-      gameState.current.penguinX = Math.min(330, gameState.current.penguinX + 25);
-  };
 
   return (
     <div className="flex flex-col items-center h-full bg-[#c0c0c0] p-2 select-none">
-      <div className="bg-black text-[#00ff00] font-mono p-2 w-full text-center mb-2 border-2 border-gray-600 shadow-inner text-xl font-bold">
-        SCORE: {scoreDisplay}
-      </div>
-
-      <div className="relative border-4 border-gray-600 bg-blue-300 shadow-xl">
+      <div className="relative border-4 border-gray-600 bg-blue-300 shadow-xl w-[350px] h-[400px]">
         <canvas 
           ref={canvasRef} 
           width={350} 
           height={400} 
-          className="block"
+          className="block w-full h-full"
         />
         
-        {/* Start Screen Overlay */}
+        {/* Start Screen */}
         {showStartScreen && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 text-white z-10 backdrop-blur-sm">
-            <h2 className="text-3xl font-bold mb-4 font-['Courier_New'] text-[#00ffff] drop-shadow-md">PENGUIN RUSH</h2>
-            <Button98 onClick={startGame} className="animate-pulse scale-110">START GAME</Button98>
-            <div className="mt-6 text-center font-mono">
-                <p>Avoid Rocks 🪨</p>
-                <p>Catch Fish 🐟</p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 text-white z-10 backdrop-blur-sm p-4 text-center">
+            <h2 className="text-4xl font-bold mb-2 font-['VT323'] text-[#00ffff] drop-shadow-md tracking-widest">PENGUIN RUSH</h2>
+            <div className="mb-6 space-y-2 text-lg font-mono">
+                <p>High Score: {highScore}</p>
             </div>
-            <p className="mt-4 text-xs text-gray-300">Use Arrow Keys or Buttons</p>
+            <Button98 onClick={startGame} className="animate-pulse scale-110 px-6 py-2">START GAME</Button98>
+            <div className="mt-8 text-sm text-gray-300 font-mono">
+                <p>⬅️ Move Left | Move Right ➡️</p>
+            </div>
           </div>
         )}
 
-        {/* Game Over Screen Overlay */}
+        {/* Game Over Screen */}
         {showGameOverScreen && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/90 text-white z-10">
-            <h2 className="text-4xl font-bold mb-2 text-red-500 bg-black px-2 border border-white">GAME OVER</h2>
-            <p className="mb-6 text-2xl font-mono">Score: {scoreDisplay}</p>
+            <h2 className="text-5xl font-bold mb-4 text-red-500 bg-black px-4 py-1 border-2 border-white font-['VT323']">GAME OVER</h2>
+            <div className="text-center mb-6 font-mono">
+                <p className="text-xl">Score: {scoreDisplay}</p>
+                {scoreDisplay >= highScore && scoreDisplay > 0 && (
+                    <p className="text-yellow-400 font-bold animate-bounce mt-2">✨ NEW HIGH SCORE! ✨</p>
+                )}
+            </div>
             <Button98 onClick={startGame}>TRY AGAIN</Button98>
           </div>
         )}
       </div>
 
-      <div className="mt-4 flex gap-8 md:hidden w-full justify-center">
+      {/* Improved Mobile Controls */}
+      <div className="mt-4 flex gap-4 w-full max-w-[350px] justify-between md:hidden">
          <Button98 
-            className="w-16 h-16 text-3xl active:bg-gray-400 flex items-center justify-center" 
-            onTouchStart={(e) => { e.preventDefault(); moveLeft(); }} 
-            onMouseDown={moveLeft}
+            className="flex-1 h-16 text-4xl active:bg-gray-400 flex items-center justify-center touch-none select-none" 
+            onPointerDown={(e) => { e.preventDefault(); setInput('ArrowLeft', true); }}
+            onPointerUp={(e) => { e.preventDefault(); setInput('ArrowLeft', false); }}
+            onPointerLeave={(e) => { e.preventDefault(); setInput('ArrowLeft', false); }}
+            onContextMenu={(e) => e.preventDefault()}
          >
             ⬅️
          </Button98>
          <Button98 
-            className="w-16 h-16 text-3xl active:bg-gray-400 flex items-center justify-center" 
-            onTouchStart={(e) => { e.preventDefault(); moveRight(); }} 
-            onMouseDown={moveRight}
+            className="flex-1 h-16 text-4xl active:bg-gray-400 flex items-center justify-center touch-none select-none" 
+            onPointerDown={(e) => { e.preventDefault(); setInput('ArrowRight', true); }}
+            onPointerUp={(e) => { e.preventDefault(); setInput('ArrowRight', false); }}
+            onPointerLeave={(e) => { e.preventDefault(); setInput('ArrowRight', false); }}
+            onContextMenu={(e) => e.preventDefault()}
          >
             ➡️
          </Button98>
+      </div>
+      <div className="hidden md:block mt-2 text-gray-600 font-mono text-sm">
+          Use Arrow Keys to Move
       </div>
     </div>
   );
