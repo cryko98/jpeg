@@ -1,66 +1,54 @@
 import { createClient } from '@supabase/supabase-js';
 
 // ------------------------------------------------------------------
-// ⚠️ FONTOS BEÁLLÍTÁS / IMPORTANT CONFIG
+// CONFIGURATION
 // ------------------------------------------------------------------
-// Mivel a környezeti változók (process.env) nem mindig jutnak el a böngészőhöz,
-// a legbiztosabb, ha ide másolod be közvetlenül az adatokat.
-//
-// 1. Töröld ki az üres stringet ("").
-// 2. Másold be a Supabase URL-t és az ANON KEY-t az idézőjelek közé.
+// This client relies on Environment Variables.
+// It supports both standard Node.js (process.env) and Vite (import.meta.env)
 // ------------------------------------------------------------------
 
-const MANUAL_SUPABASE_URL = ""; 
-// Pl: "https://wkkeyyrknmnynlcefugq.supabase.co"
-
-const MANUAL_SUPABASE_ANON_KEY = ""; 
-// Pl: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-
-// ------------------------------------------------------------------
-
-// Segédfüggvény a környezeti változók biztonságos olvasására (ha mégis működnének)
 const getEnvVar = (key: string) => {
   try {
-    // Node/Webpack stílus
-    if (typeof process !== 'undefined' && process.env && process.env[key]) {
-      return process.env[key];
+    // Check for Vite prefixed variables first if using Vite
+    const viteKey = `VITE_${key}`;
+    
+    // Check import.meta.env (Vite/Modern browsers)
+    if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
+        if ((import.meta as any).env[key]) return (import.meta as any).env[key];
+        if ((import.meta as any).env[viteKey]) return (import.meta as any).env[viteKey];
     }
-    // Vite stílus
-    if (typeof import.meta !== 'undefined' && (import.meta as any).env && (import.meta as any).env[key]) {
-      return (import.meta as any).env[key];
+    
+    // Check process.env (Node/Webpack)
+    if (typeof process !== 'undefined' && process.env) {
+        if (process.env[key]) return process.env[key];
+        if (process.env[viteKey]) return process.env[viteKey];
     }
-  } catch (e) {
-    return '';
+  } catch (e) { 
+      return ''; 
   }
   return '';
 };
 
-// Prioritás: 1. Manuális (hardcoded) 2. Környezeti változó
-const supabaseUrl = MANUAL_SUPABASE_URL || getEnvVar('SUPABASE_URL') || '';
-const supabaseAnonKey = MANUAL_SUPABASE_ANON_KEY || getEnvVar('SUPABASE_ANON_KEY') || '';
+const supabaseUrl = getEnvVar('SUPABASE_URL');
+const supabaseAnonKey = getEnvVar('SUPABASE_ANON_KEY');
 
-// URL Validáció
 const isValidUrl = (url: string) => {
   try {
     if (!url) return false;
     const parsed = new URL(url);
     return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-  } catch {
-    return false;
-  }
+  } catch { return false; }
 };
 
-const isConfigured = isValidUrl(supabaseUrl) && supabaseAnonKey.length > 20;
+const isConfigured = isValidUrl(supabaseUrl) && supabaseAnonKey && supabaseAnonKey.length > 20;
 
 if (!isConfigured) {
-  console.log('%c⚠️ SUPABASE HIBA', 'color: red; font-size: 20px; font-weight: bold;');
-  console.log('A leaderboard OFFLINE módban van.');
-  console.log('Kérlek töltsd ki a MANUAL_SUPABASE_URL és MANUAL_SUPABASE_ANON_KEY változókat a lib/supabaseClient.ts fájlban!');
+  console.warn("Supabase is not configured. Leaderboard will be offline.");
+  console.log("Required Env Vars: SUPABASE_URL, SUPABASE_ANON_KEY");
 }
 
 export const isSupabaseConfigured = isConfigured;
 
-// Kliens létrehozása vagy Mockolása
 export const supabase = isConfigured 
   ? createClient(supabaseUrl, supabaseAnonKey)
   : {
@@ -70,6 +58,6 @@ export const supabase = isConfigured
             limit: () => Promise.resolve({ data: [], error: null }),
           }),
         }),
-        insert: () => Promise.resolve({ data: null, error: { message: "Supabase credentials missing in lib/supabaseClient.ts" } }),
+        insert: () => Promise.resolve({ data: null, error: { message: "Supabase credentials missing in environment variables." } }),
       }),
     } as any;
