@@ -77,6 +77,7 @@ export const PenguinGameContent: React.FC = () => {
   }, []);
 
   const fetchLeaderboard = async () => {
+    if (isLoadingLeaderboard) return; // Prevent double click
     setIsLoadingLeaderboard(true);
     try {
         const { data, error } = await supabase
@@ -410,7 +411,17 @@ export const PenguinGameContent: React.FC = () => {
             <div className="w-full bg-[#000080] border-2 border-white p-2">
                 <h3 className="text-center text-yellow-300 font-bold mb-2 border-b border-white pb-1 flex justify-between items-center">
                     <span>🏆 TOP 10</span>
-                    {!isSupabaseConfigured && <span className="text-xs text-red-300 bg-red-900 px-1 blink">OFFLINE</span>}
+                    <div className="flex items-center gap-2">
+                        {!isSupabaseConfigured && <span className="text-xs text-red-300 bg-red-900 px-1 blink">OFFLINE</span>}
+                        <Button98 
+                            onClick={fetchLeaderboard} 
+                            disabled={isLoadingLeaderboard}
+                            className="px-1 py-0 h-6 text-xs w-6 flex items-center justify-center"
+                            title="Refresh Leaderboard"
+                        >
+                            {isLoadingLeaderboard ? '...' : '🔄'}
+                        </Button98>
+                    </div>
                 </h3>
                 {isLoadingLeaderboard ? (
                     <div className="text-center text-sm">Loading...</div>
