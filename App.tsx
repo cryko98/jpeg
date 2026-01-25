@@ -142,7 +142,7 @@ const App: React.FC = () => {
   const toggleStart = () => setIsStartOpen(!isStartOpen);
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-[#008080] selection:bg-[#000080] selection:text-white"
+    <div className="relative w-screen h-screen overflow-hidden selection:bg-[#000080] selection:text-white"
          onClick={() => setIsStartOpen(false)}>
       
       {/* Desktop Icons */}
