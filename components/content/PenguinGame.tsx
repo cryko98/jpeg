@@ -283,8 +283,8 @@ export const PenguinGameContent: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col items-center h-full bg-[#c0c0c0] p-2 select-none">
-      <div className="relative border-4 border-gray-600 bg-blue-300 shadow-xl w-[350px] h-[400px]">
+    <div className="flex flex-col items-center h-full bg-[#c0c0c0] p-2 select-none overflow-hidden">
+      <div className="relative border-4 border-gray-600 bg-blue-300 shadow-xl w-[350px] max-w-full h-[400px]">
         <canvas 
           ref={canvasRef} 
           width={350} 
@@ -322,7 +322,7 @@ export const PenguinGameContent: React.FC = () => {
       </div>
 
       {/* Improved Mobile Controls */}
-      <div className="mt-4 flex gap-4 w-full max-w-[350px] justify-between md:hidden">
+      <div className="mt-4 flex gap-4 w-full max-w-[350px] justify-between md:hidden pb-4">
          <Button98 
             className="flex-1 h-16 text-4xl active:bg-gray-400 flex items-center justify-center touch-none select-none" 
             onPointerDown={(e) => { e.preventDefault(); setInput('ArrowLeft', true); }}

@@ -109,18 +109,42 @@ const App: React.FC = () => {
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [maxZ, setMaxZ] = useState(10);
 
-  // Initial calculation for center screen
+  // Initial calculation for responsive layout
   useEffect(() => {
     const w = window.innerWidth;
     const h = window.innerHeight;
+    const isMobile = w < 768;
     
-    setWindows(prev => prev.map(win => ({
-        ...win,
-        position: {
-            x: Math.max(0, Math.min(w - (win.width || 400), Math.random() * (w - 400))),
-            y: Math.max(0, Math.min(h - (win.height || 400) - 50, Math.random() * (h - 500)))
+    setWindows(prev => prev.map(win => {
+        // Calculate responsive width
+        let newWidth = win.width || 400;
+        let newHeight = win.height;
+        
+        if (newWidth > w - 20) {
+            newWidth = w - 20; // 10px padding each side
         }
-    })));
+
+        // Determine Position
+        let newX, newY;
+        
+        if (isMobile) {
+            // Center on mobile
+            newX = (w - newWidth) / 2;
+            newY = 20 + (Math.random() * 30); // Slight offset
+            if (win.id === 'welcome') newY = 10;
+        } else {
+            // Desktop random positioning
+            newX = Math.max(0, Math.min(w - newWidth, Math.random() * (w - 400)));
+            newY = Math.max(0, Math.min(h - (win.height || 400) - 50, Math.random() * (h - 500)));
+        }
+
+        return {
+            ...win,
+            width: newWidth,
+            height: newHeight,
+            position: { x: newX, y: newY }
+        };
+    }));
   }, []);
 
   const handleWindowAction = (action: string, id: string, payload?: any) => {
@@ -132,7 +156,14 @@ const App: React.FC = () => {
           const newZ = maxZ + 1;
           setMaxZ(newZ);
           setActiveWindowId(id);
-          return { ...w, isOpen: true, isMinimized: false, zIndex: newZ };
+          
+          // Re-center on mobile when opening if it was closed
+          let pos = w.position;
+          if (!w.isOpen && window.innerWidth < 768) {
+              pos = { x: (window.innerWidth - (w.width || 300)) / 2, y: 20 };
+          }
+
+          return { ...w, isOpen: true, isMinimized: false, zIndex: newZ, position: pos };
         case 'CLOSE':
           return { ...w, isOpen: false };
         case 'MINIMIZE':
@@ -159,7 +190,7 @@ const App: React.FC = () => {
          onClick={() => setIsStartOpen(false)}>
       
       {/* Desktop Icons */}
-      <div className="absolute top-4 left-4 flex flex-col gap-6 z-0 flex-wrap h-[calc(100vh-60px)] content-start">
+      <div className="absolute top-4 left-4 flex flex-col gap-6 z-0 flex-wrap h-[calc(100vh-80px)] content-start">
         <DesktopIcon 
           label="My Computer" 
           icon={<img src={PENGUIN_LOGO} alt="icon" className="w-full h-full object-cover" />}
