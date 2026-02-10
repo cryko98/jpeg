@@ -10,7 +10,7 @@ export const GalleryContent: React.FC = () => {
             {images.map((src, i) => (
                 <div key={i} className="bg-[#c0c0c0] p-1 border border-white">
                     <img src={src} alt={`Meme ${i}`} className="w-full h-auto grayscale hover:grayscale-0 transition-all cursor-crosshair" />
-                    <p className="text-center text-xs mt-1 font-mono truncate">penguin_{i}.jpeg</p>
+                    <p className="text-center text-xs mt-1 font-mono truncate">giraffe_{i}.gif</p>
                 </div>
             ))}
         </div>

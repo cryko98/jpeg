@@ -27,6 +27,6 @@ export type WindowAction =
 
 export const APP_CONSTANTS = {
     CA: "3STprMn",
-    TICKER: "$.jpeg",
-    NAME: "Just a penguin"
+    TICKER: "$.gif",
+    NAME: "The best .gif"
 };

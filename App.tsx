@@ -10,10 +10,11 @@ import { GalleryContent } from './components/content/Gallery';
 import { DexScreenerEmbed } from './components/content/DexScreenerEmbed';
 import { PaintContent } from './components/content/Paint';
 import { HowToBuyContent } from './components/content/HowToBuy';
-import { PenguinGameContent } from './components/content/PenguinGame';
+import { GiraffeGameContent } from './components/content/PenguinGame';
 
 // Asset
 const MAIN_LOGO_VIDEO = "https://wkkeyyrknmnynlcefugq.supabase.co/storage/v1/object/public/neww/VID_20260210_125930_387.mp4";
+const GIRAFFE_ICON = "https://png.pngtree.com/png-vector/20240809/ourmid/pngtree-cute-mini-giraffe-png-image_13420476.png";
 
 // Initial Windows Config
 const INITIAL_WINDOWS: WindowState[] = [
@@ -31,19 +32,19 @@ const INITIAL_WINDOWS: WindowState[] = [
   },
   {
     id: 'game',
-    title: 'Penguin_Rush.exe',
+    title: 'Giraffe_Rush.exe',
     isOpen: false,
     isMinimized: false,
     zIndex: 7,
     position: { x: 250, y: 100 },
     width: 400,
     height: 550,
-    icon: '🐧',
-    content: <PenguinGameContent />
+    icon: <img src={GIRAFFE_ICON} className="w-5 h-5 object-contain" alt="icon" />,
+    content: <GiraffeGameContent />
   },
   {
     id: 'wallet',
-    title: 'Investment.jpeg',
+    title: 'Investment.gif',
     isOpen: false,
     isMinimized: false,
     zIndex: 2,
@@ -175,8 +176,8 @@ const App: React.FC = () => {
         />
 
         <DesktopIcon 
-          label="Penguin Rush" 
-          icon="🐧" 
+          label="Giraffe Rush" 
+          icon={<img src={GIRAFFE_ICON} className="w-full h-full object-contain drop-shadow-md" alt="Giraffe" />} 
           onDoubleClick={() => handleWindowAction('OPEN', 'game')} 
         />
 

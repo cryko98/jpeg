@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button98 } from '../ui/Button98';
 import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
 
+const GIRAFFE_IMG_SRC = "https://png.pngtree.com/png-vector/20240809/ourmid/pngtree-cute-mini-giraffe-png-image_13420476.png";
+
 interface GameObject {
   x: number;
   y: number;
@@ -25,7 +27,7 @@ interface LeaderboardEntry {
   created_at: string;
 }
 
-export const PenguinGameContent: React.FC = () => {
+export const GiraffeGameContent: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // UI State
@@ -42,6 +44,15 @@ export const PenguinGameContent: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const giraffeImageRef = useRef<HTMLImageElement | null>(null);
+
+  // Load Image
+  useEffect(() => {
+    const img = new Image();
+    img.src = GIRAFFE_IMG_SRC;
+    giraffeImageRef.current = img;
+  }, []);
 
   // Sync username state to ref
   useEffect(() => {
@@ -265,29 +276,49 @@ export const PenguinGameContent: React.FC = () => {
     }
 
     // Render
-    ctx.fillStyle = '#C8E6C9'; // Light green background
+    // Sahara Background (Sandy Yellow/Orange)
+    ctx.fillStyle = '#F4A460'; // Sandy Brown
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Savanna background
-    ctx.fillStyle = '#A5D6A7';
+    // Sun
+    ctx.fillStyle = '#FFD700'; // Gold
     ctx.beginPath();
-    ctx.ellipse(100, canvas.height - 20, 150, 40, 0, 0, Math.PI * 2);
-    ctx.ellipse(300, canvas.height - 20, 200, 60, 0, 0, Math.PI * 2);
+    ctx.arc(canvas.width - 50, 50, 30, 0, Math.PI * 2);
     ctx.fill();
 
-    // Ground
-    ctx.fillStyle = '#8D6E63'; // Dirt
-    ctx.fillRect(0, canvas.height - 15, canvas.width, 15);
+    // Dunes/Hills
+    ctx.fillStyle = '#DEB887'; // Burlywood (slightly darker sand)
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height - 50);
+    ctx.quadraticCurveTo(100, canvas.height - 100, 200, canvas.height - 60);
+    ctx.quadraticCurveTo(280, canvas.height - 20, canvas.width, canvas.height - 50);
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.lineTo(0, canvas.height);
+    ctx.fill();
 
-    // Giraffe
+    // Ground line
+    ctx.fillStyle = '#8B4513'; // SaddleBrown
+    ctx.fillRect(0, canvas.height - 10, canvas.width, 10);
+
+    // Giraffe Character
     ctx.save();
     ctx.translate(state.giraffeX, canvas.height - 10);
     const tilt = dx * 0.04; 
     ctx.rotate(tilt);
-    ctx.font = "45px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "bottom";
-    ctx.fillText("🦒", 0, 0);
+    
+    // Draw the image if loaded, otherwise fallback to text for safety
+    if (giraffeImageRef.current && giraffeImageRef.current.complete) {
+        // Center the image at (0,0) after translation
+        const w = 60;
+        const h = 70;
+        ctx.drawImage(giraffeImageRef.current, -w/2, -h, w, h);
+    } else {
+        ctx.font = "50px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText("🦒", 0, 0);
+    }
+    
     ctx.restore();
 
     // Objects
@@ -295,7 +326,8 @@ export const PenguinGameContent: React.FC = () => {
     ctx.textBaseline = "middle";
     ctx.font = "35px Arial";
     state.objects.forEach(obj => {
-        ctx.fillText(obj.type === 'leaf' ? "🍃" : "🪨", obj.x, obj.y);
+        // Rock or Acacia Leaf
+        ctx.fillText(obj.type === 'leaf' ? "🌿" : "🪨", obj.x, obj.y);
     });
 
     // Particles
@@ -305,7 +337,7 @@ export const PenguinGameContent: React.FC = () => {
     });
 
     // HUD
-    ctx.fillStyle = "#1B5E20";
+    ctx.fillStyle = "#5D4037"; // Dark brown text
     ctx.font = "bold 20px VT323";
     ctx.textAlign = "left";
     ctx.fillText(`SCORE: ${state.score}`, 10, 30);
@@ -336,30 +368,30 @@ export const PenguinGameContent: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center h-full bg-[#c0c0c0] p-2 select-none overflow-hidden">
-      <div className="relative border-4 border-gray-600 bg-green-100 shadow-xl w-[350px] max-w-full h-[400px]">
+      <div className="relative border-4 border-gray-600 bg-orange-100 shadow-xl w-[350px] max-w-full h-[400px]">
         <canvas ref={canvasRef} width={350} height={400} className="block w-full h-full" />
         
         {showStartScreen && (
           <div className="absolute inset-0 flex flex-col items-center bg-black/85 text-white z-10 p-4">
-            <h2 className="text-4xl font-bold mb-4 font-['VT323'] text-yellow-400 drop-shadow-lg tracking-widest">GIRAFFE RUSH</h2>
+            <h2 className="text-4xl font-bold mb-4 font-['VT323'] text-yellow-500 drop-shadow-lg tracking-widest">GIRAFFE RUSH</h2>
             <div className="w-full max-w-[280px] mb-6">
                 <label className="block text-xs mb-1 text-yellow-100">Explorer Name:</label>
                 <input 
                     type="text" 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Giraffe Lover"
+                    placeholder="Giraffe Fan"
                     className="w-full bg-white text-black font-mono px-2 py-1 border-2 border-inset border-gray-600"
                     maxLength={15}
                 />
             </div>
-            <Button98 onClick={startGame} className="scale-110 px-8 py-2 mb-6">FEED GIRAFFE</Button98>
-            <div className="w-full bg-[#1B5E20] border-2 border-white p-2 text-xs">
-                <h3 className="text-center font-bold mb-1 text-yellow-300">🌿 SAVANNA KINGS</h3>
+            <Button98 onClick={startGame} className="scale-110 px-8 py-2 mb-6">START SAFARI</Button98>
+            <div className="w-full bg-[#8B4513] border-2 border-white p-2 text-xs">
+                <h3 className="text-center font-bold mb-1 text-yellow-300">🏜️ SAHARA KINGS</h3>
                 <table className="w-full font-mono">
                     <tbody>
                         {leaderboard.map((entry, idx) => (
-                            <tr key={idx} className={idx === 0 ? 'text-yellow-300' : ''}>
+                            <tr key={idx} className={idx === 0 ? 'text-yellow-300' : 'text-white'}>
                                 <td className="w-6">{idx + 1}.</td>
                                 <td className="text-left truncate">{entry.username}</td>
                                 <td className="text-right">{entry.score}</td>
@@ -372,11 +404,11 @@ export const PenguinGameContent: React.FC = () => {
         )}
 
         {showGameOverScreen && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-900/95 text-white z-20">
-            <h2 className="text-5xl font-bold mb-4 text-yellow-500 font-['VT323']">DROPPED!</h2>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-orange-900/95 text-white z-20">
+            <h2 className="text-5xl font-bold mb-4 text-yellow-500 font-['VT323']">GAME OVER!</h2>
             <div className="text-center mb-6 font-mono">
-                <p className="text-2xl">Leaves Caught: {scoreDisplay}</p>
-                {isSubmitting ? <p className="text-sm animate-pulse text-yellow-300">Syncing with forest...</p> : null}
+                <p className="text-2xl">Leaves Eaten: {scoreDisplay}</p>
+                {isSubmitting ? <p className="text-sm animate-pulse text-yellow-300">Syncing with blockchain...</p> : null}
             </div>
             <Button98 onClick={() => { setShowGameOverScreen(false); setShowStartScreen(true); fetchLeaderboard(); }}>REPLAY</Button98>
           </div>

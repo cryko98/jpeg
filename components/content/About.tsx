@@ -16,7 +16,7 @@ export const AboutContent: React.FC = () => {
         />
         <div className="space-y-4">
           <p className="text-lg leading-relaxed">
-            It is literally just a <span className="font-bold underline">.gif</span>. No utility, no roadmap, just an infinite loop on the blockchain.
+            It is literally just a <span className="font-bold underline">.gif</span>. No utility, no roadmap, just a long-neck infinite loop on the blockchain.
           </p>
           <p className="text-lg leading-relaxed">
             We are bringing back the soul of the 90s internet. The <span className="font-bold text-blue-800">{APP_CONSTANTS.TICKER}</span> era. 
@@ -29,14 +29,14 @@ export const AboutContent: React.FC = () => {
         <h3 className="font-bold border-b border-black mb-2">System Information:</h3>
         <ul className="list-disc pl-5 space-y-1">
           <li>Ticker: <span className="bg-blue-800 text-white px-1">{APP_CONSTANTS.TICKER}</span></li>
+          <li>Species: Giraffa camelopardalis</li>
           <li>Format: Animated Graphics Interchange</li>
-          <li>LP: Locked in the Matrix</li>
-          <li>Vibe: 60 FPS</li>
+          <li>Height: Very Tall</li>
         </ul>
       </div>
 
       <p className="text-center italic mt-8 text-gray-500">
-        "I thought it was a video, but it was just a .gif" - Bill G.
+        "I thought it was a jpeg, but it was actually a .gif" - Steve J.
       </p>
     </div>
   );
