@@ -26,7 +26,7 @@ export type WindowAction =
   | { type: 'MOVE'; id: string; position: Position };
 
 export const APP_CONSTANTS = {
-    CA: "3STprMn",
+    CA: "X9U2efmZRvvQrGDpS2z854N43etQB2arWuJ7zCDUgif",
     TICKER: "$.gif",
     NAME: "The best .gif"
 };

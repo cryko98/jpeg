@@ -211,7 +211,7 @@ const App: React.FC = () => {
           onDoubleClick={() => handleWindowAction('OPEN', 'gallery')} 
         />
         
-        <a href="https://x.com" target="_blank" rel="noreferrer">
+        <a href="https://x.com/i/communities/2021158557002104990" target="_blank" rel="noreferrer">
              <DesktopIcon 
             label="X.com" 
             icon={<div className="text-5xl font-bold font-mono">𝕏</div>}
