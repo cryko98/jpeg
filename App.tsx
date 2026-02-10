@@ -12,38 +12,38 @@ import { PaintContent } from './components/content/Paint';
 import { HowToBuyContent } from './components/content/HowToBuy';
 import { PenguinGameContent } from './components/content/PenguinGame';
 
-// New Video Logo Asset
+// Asset
 const MAIN_LOGO_VIDEO = "https://wkkeyyrknmnynlcefugq.supabase.co/storage/v1/object/public/neww/VID_20260210_125930_387.mp4";
 
 // Initial Windows Config
 const INITIAL_WINDOWS: WindowState[] = [
   {
     id: 'welcome',
-    title: 'Welcome.gif',
+    title: 'Readme.txt',
     isOpen: true,
     isMinimized: false,
     zIndex: 1,
     position: { x: 50, y: 50 },
     width: 600,
     height: 500,
-    icon: <video src={MAIN_LOGO_VIDEO} autoPlay loop muted className="w-4 h-4 object-cover" />,
+    icon: '📄',
     content: <AboutContent />
   },
   {
     id: 'game',
-    title: 'Giraffe_Rush.exe',
+    title: 'Penguin_Rush.exe',
     isOpen: false,
     isMinimized: false,
     zIndex: 7,
     position: { x: 250, y: 100 },
     width: 400,
     height: 550,
-    icon: '🦒',
+    icon: '🐧',
     content: <PenguinGameContent />
   },
   {
     id: 'wallet',
-    title: 'Wallet.gif',
+    title: 'Investment.jpeg',
     isOpen: false,
     isMinimized: false,
     zIndex: 2,
@@ -55,19 +55,19 @@ const INITIAL_WINDOWS: WindowState[] = [
   },
   {
     id: 'howtobuy',
-    title: 'How_to_buy.txt',
+    title: 'Setup.exe',
     isOpen: false,
     isMinimized: false,
     zIndex: 3,
     position: { x: 100, y: 100 },
     width: 500,
     height: 500,
-    icon: '📝',
+    icon: '💿',
     content: <HowToBuyContent />
   },
   {
     id: 'gallery',
-    title: 'My Gifs',
+    title: 'My Pictures',
     isOpen: false,
     isMinimized: false,
     zIndex: 4,
@@ -79,19 +79,19 @@ const INITIAL_WINDOWS: WindowState[] = [
   },
   {
     id: 'dexscreener',
-    title: 'DexScreener',
+    title: 'Live Chart',
     isOpen: false,
     isMinimized: false,
     zIndex: 5,
     position: { x: 100, y: 100 },
     width: 600,
     height: 500,
-    icon: '🦅',
+    icon: '📊',
     content: <DexScreenerEmbed />
   },
   {
     id: 'paint',
-    title: 'Paint.exe',
+    title: 'MSPaint.exe',
     isOpen: false,
     isMinimized: false,
     zIndex: 6,
@@ -175,8 +175,8 @@ const App: React.FC = () => {
         />
 
         <DesktopIcon 
-          label="Giraffe Rush" 
-          icon="🦒" 
+          label="Penguin Rush" 
+          icon="🐧" 
           onDoubleClick={() => handleWindowAction('OPEN', 'game')} 
         />
 
@@ -188,7 +188,7 @@ const App: React.FC = () => {
 
         <DesktopIcon 
           label="How to Buy" 
-          icon="💊" 
+          icon="💾" 
           onDoubleClick={() => handleWindowAction('OPEN', 'howtobuy')} 
         />
 
@@ -205,14 +205,14 @@ const App: React.FC = () => {
         />
         
         <DesktopIcon 
-          label="Gifs" 
+          label="Pictures" 
           icon="🖼️" 
           onDoubleClick={() => handleWindowAction('OPEN', 'gallery')} 
         />
         
         <a href="https://x.com" target="_blank" rel="noreferrer">
              <DesktopIcon 
-            label="Community" 
+            label="X.com" 
             icon={<div className="text-5xl font-bold font-mono">𝕏</div>}
             onDoubleClick={() => {}} 
             />
