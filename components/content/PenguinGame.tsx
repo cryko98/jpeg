@@ -5,7 +5,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabaseClient';
 interface GameObject {
   x: number;
   y: number;
-  type: 'fish' | 'rock';
+  type: 'leaf' | 'rock';
   id: number;
   drift: number; // Horizontal movement
 }
@@ -37,7 +37,6 @@ export const PenguinGameContent: React.FC = () => {
   
   // Leaderboard State
   const [username, setUsername] = useState('');
-  // Use a ref for username to ensure access inside closures (game loop)
   const usernameRef = useRef('');
   
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -54,30 +53,27 @@ export const PenguinGameContent: React.FC = () => {
     isPlaying: false,
     gameOver: false,
     score: 0,
-    penguinX: 175,
-    penguinVel: 0,
+    giraffeX: 175,
     objects: [] as GameObject[],
     particles: [] as Particle[],
     lastSpawnTime: 0,
     difficultyMultiplier: 1
   });
 
-  // Input State (Set of currently pressed keys)
   const keysPressed = useRef<Set<string>>(new Set());
   const frameId = useRef<number>(0);
 
-  // Load High Score from local storage (backup)
   useEffect(() => {
-    const saved = localStorage.getItem('penguin_highscore');
+    const saved = localStorage.getItem('giraffe_highscore');
     if (saved) setHighScore(parseInt(saved));
-    const savedUser = localStorage.getItem('penguin_username');
+    const savedUser = localStorage.getItem('giraffe_username');
     if (savedUser) setUsername(savedUser);
     
     fetchLeaderboard();
   }, []);
 
   const fetchLeaderboard = async () => {
-    if (isLoadingLeaderboard) return; // Prevent double click
+    if (isLoadingLeaderboard) return;
     setIsLoadingLeaderboard(true);
     try {
         const { data, error } = await supabase
@@ -105,7 +101,6 @@ export const PenguinGameContent: React.FC = () => {
     setIsSubmitting(true);
     setSubmitError(null);
 
-    // If mock mode, pretend to save
     if (!isSupabaseConfigured) {
         setTimeout(() => {
             setIsSubmitting(false);
@@ -120,21 +115,17 @@ export const PenguinGameContent: React.FC = () => {
         ]);
 
         if (error) {
-            console.error("Supabase insert error:", error);
             setSubmitError(error.message || "Failed to save score.");
         } else {
-            // Refresh leaderboard after submission
             await fetchLeaderboard();
         }
     } catch (err: any) {
-        console.error("Error submitting score:", err);
         setSubmitError(err.message || "Unexpected error.");
     } finally {
         setIsSubmitting(false);
     }
   };
 
-  // --- Input Handlers ---
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     keysPressed.current.add(e.key);
   }, []);
@@ -152,7 +143,6 @@ export const PenguinGameContent: React.FC = () => {
     };
   }, [handleKeyDown, handleKeyUp]);
 
-  // Mobile Input Helpers
   const setInput = (key: string, pressed: boolean) => {
     if (pressed) keysPressed.current.add(key);
     else keysPressed.current.delete(key);
@@ -160,19 +150,17 @@ export const PenguinGameContent: React.FC = () => {
 
   const startGame = () => {
     if (!username.trim()) {
-        alert("Please enter your Twitter username (@username) to play!");
+        alert("Please enter your name to play!");
         return;
     }
     
-    // Save username for next time
-    localStorage.setItem('penguin_username', username);
+    localStorage.setItem('giraffe_username', username);
 
     gameState.current = {
       isPlaying: true,
       gameOver: false,
       score: 0,
-      penguinX: 175,
-      penguinVel: 0,
+      giraffeX: 175,
       objects: [],
       particles: [],
       lastSpawnTime: Date.now(),
@@ -207,25 +195,18 @@ export const PenguinGameContent: React.FC = () => {
     if (!ctx) return;
 
     const state = gameState.current;
-
     if (!state.isPlaying || state.gameOver) return;
 
-    // --- 1. UPDATE PHYSICS ---
-
-    // Movement Logic (Smooth sliding)
-    const moveSpeed = 6;
+    // Movement
+    const moveSpeed = 7;
     let dx = 0;
-    
     if (keysPressed.current.has('ArrowLeft')) dx -= moveSpeed;
     if (keysPressed.current.has('ArrowRight')) dx += moveSpeed;
 
-    state.penguinX += dx;
-    
-    // Clamp to screen
-    if (state.penguinX < 20) state.penguinX = 20;
-    if (state.penguinX > canvas.width - 20) state.penguinX = canvas.width - 20;
+    state.giraffeX += dx;
+    if (state.giraffeX < 20) state.giraffeX = 20;
+    if (state.giraffeX > canvas.width - 20) state.giraffeX = canvas.width - 20;
 
-    // Difficulty ramp up
     state.difficultyMultiplier = 1 + (state.score * 0.002);
 
     // Spawning
@@ -236,40 +217,36 @@ export const PenguinGameContent: React.FC = () => {
       state.objects.push({
         x: Math.random() * (canvas.width - 40) + 20,
         y: -30,
-        type: Math.random() > 0.35 ? 'fish' : 'rock',
+        type: Math.random() > 0.4 ? 'leaf' : 'rock',
         id: now,
-        drift: (Math.random() - 0.5) * (state.difficultyMultiplier * 0.5) // Random drift
+        drift: (Math.random() - 0.5) * (state.difficultyMultiplier * 0.8)
       });
       state.lastSpawnTime = now;
     }
 
     // Update Objects
-    const fallSpeed = 3 * state.difficultyMultiplier;
+    const fallSpeed = 3.5 * state.difficultyMultiplier;
 
     for (let i = state.objects.length - 1; i >= 0; i--) {
         const obj = state.objects[i];
         obj.y += fallSpeed;
         obj.x += obj.drift;
 
-        // Bounce off walls (drift)
         if (obj.x < 10 || obj.x > canvas.width - 10) obj.drift *= -1;
 
-        // Collision Check
-        // Penguin Hitbox: approx 40x40 center bottom
-        const hitDist = 30; // forgiving hitbox
-        const distY = Math.abs(obj.y - (canvas.height - 20));
-        const distX = Math.abs(obj.x - state.penguinX);
+        const hitDist = 35; 
+        const distY = Math.abs(obj.y - (canvas.height - 30));
+        const distX = Math.abs(obj.x - state.giraffeX);
 
-        if (distY < 30 && distX < hitDist) {
+        if (distY < 40 && distX < hitDist) {
              if (obj.type === 'rock') {
-                 createParticles(state.penguinX, canvas.height - 20, '#FF0000');
+                 createParticles(state.giraffeX, canvas.height - 20, '#FF0000');
                  endGame();
                  return;
              } else {
-                 // Caught Fish
                  state.score += 10;
                  setScoreDisplay(state.score);
-                 createParticles(obj.x, obj.y, '#FFD700'); // Gold particles
+                 createParticles(obj.x, obj.y, '#4CAF50'); // Green particles
                  state.objects.splice(i, 1);
                  continue;
              }
@@ -278,7 +255,7 @@ export const PenguinGameContent: React.FC = () => {
         if (obj.y > canvas.height) state.objects.splice(i, 1);
     }
 
-    // Update Particles
+    // Particles
     for (let i = state.particles.length - 1; i >= 0; i--) {
         const p = state.particles[i];
         p.x += p.vx;
@@ -287,45 +264,38 @@ export const PenguinGameContent: React.FC = () => {
         if (p.life <= 0) state.particles.splice(i, 1);
     }
 
-    // --- 2. RENDER ---
-    
-    // Sky
-    ctx.fillStyle = '#87CEEB';
+    // Render
+    ctx.fillStyle = '#C8E6C9'; // Light green background
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Mountains (Background decor)
-    ctx.fillStyle = '#E0F7FA';
+    // Savanna background
+    ctx.fillStyle = '#A5D6A7';
     ctx.beginPath();
-    ctx.moveTo(0, canvas.height);
-    ctx.lineTo(100, canvas.height - 100);
-    ctx.lineTo(200, canvas.height);
-    ctx.moveTo(150, canvas.height);
-    ctx.lineTo(250, canvas.height - 150);
-    ctx.lineTo(350, canvas.height);
+    ctx.ellipse(100, canvas.height - 20, 150, 40, 0, 0, Math.PI * 2);
+    ctx.ellipse(300, canvas.height - 20, 200, 60, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // Ground
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+    ctx.fillStyle = '#8D6E63'; // Dirt
+    ctx.fillRect(0, canvas.height - 15, canvas.width, 15);
 
-    // Penguin
+    // Giraffe
     ctx.save();
-    ctx.translate(state.penguinX, canvas.height - 15);
-    // Tilt effect based on movement
-    const tilt = dx * 0.05; 
+    ctx.translate(state.giraffeX, canvas.height - 10);
+    const tilt = dx * 0.04; 
     ctx.rotate(tilt);
-    ctx.font = "40px Arial";
+    ctx.font = "45px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    ctx.fillText("🐧", 0, 0);
+    ctx.fillText("🦒", 0, 0);
     ctx.restore();
 
     // Objects
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.font = "30px Arial";
+    ctx.font = "35px Arial";
     state.objects.forEach(obj => {
-        ctx.fillText(obj.type === 'fish' ? "🐟" : "🪨", obj.x, obj.y);
+        ctx.fillText(obj.type === 'leaf' ? "🍃" : "🪨", obj.x, obj.y);
     });
 
     // Particles
@@ -334,14 +304,13 @@ export const PenguinGameContent: React.FC = () => {
         ctx.fillRect(p.x, p.y, 4, 4);
     });
 
-    // Score HUD
-    ctx.fillStyle = "black";
-    ctx.font = "bold 20px Courier New";
+    // HUD
+    ctx.fillStyle = "#1B5E20";
+    ctx.font = "bold 20px VT323";
     ctx.textAlign = "left";
     ctx.fillText(`SCORE: ${state.score}`, 10, 30);
     ctx.textAlign = "right";
-    ctx.fillStyle = "#555";
-    ctx.fillText(`HI: ${Math.max(state.score, highScore)}`, canvas.width - 10, 30);
+    ctx.fillText(`BEST: ${Math.max(state.score, highScore)}`, canvas.width - 10, 30);
 
     frameId.current = requestAnimationFrame(gameLoop);
   };
@@ -352,23 +321,10 @@ export const PenguinGameContent: React.FC = () => {
     setShowGameOverScreen(true);
     
     const finalScore = gameState.current.score;
-
     if (finalScore > highScore) {
         setHighScore(finalScore);
-        localStorage.setItem('penguin_highscore', finalScore.toString());
+        localStorage.setItem('giraffe_highscore', finalScore.toString());
     }
-
-    // Draw one last frame to show collision
-    const canvas = canvasRef.current;
-    if(canvas) {
-        const ctx = canvas.getContext('2d');
-        if(ctx) {
-            ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-    }
-
-    // Submit score to Supabase
     submitScore(finalScore);
   };
 
@@ -380,120 +336,66 @@ export const PenguinGameContent: React.FC = () => {
 
   return (
     <div className="flex flex-col items-center h-full bg-[#c0c0c0] p-2 select-none overflow-hidden">
-      <div className="relative border-4 border-gray-600 bg-blue-300 shadow-xl w-[350px] max-w-full h-[400px]">
-        <canvas 
-          ref={canvasRef} 
-          width={350} 
-          height={400} 
-          className="block w-full h-full"
-        />
+      <div className="relative border-4 border-gray-600 bg-green-100 shadow-xl w-[350px] max-w-full h-[400px]">
+        <canvas ref={canvasRef} width={350} height={400} className="block w-full h-full" />
         
-        {/* Start Screen */}
         {showStartScreen && (
-          <div className="absolute inset-0 flex flex-col items-center bg-black/80 text-white z-10 backdrop-blur-sm p-4 overflow-y-auto custom-scrollbar">
-            <h2 className="text-4xl font-bold mb-2 font-['VT323'] text-[#00ffff] drop-shadow-md tracking-widest shrink-0">PENGUIN RUSH</h2>
-            
-            <div className="w-full max-w-[280px] mb-4 shrink-0">
-                <label className="block text-xs mb-1 text-gray-300">Twitter Username (@...):</label>
+          <div className="absolute inset-0 flex flex-col items-center bg-black/85 text-white z-10 p-4">
+            <h2 className="text-4xl font-bold mb-4 font-['VT323'] text-yellow-400 drop-shadow-lg tracking-widest">GIRAFFE RUSH</h2>
+            <div className="w-full max-w-[280px] mb-6">
+                <label className="block text-xs mb-1 text-yellow-100">Explorer Name:</label>
                 <input 
                     type="text" 
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="@elonmusk"
-                    className="w-full bg-white text-black font-mono px-2 py-1 border-2 border-inset border-gray-600 focus:outline-none"
-                    maxLength={20}
+                    placeholder="Giraffe Lover"
+                    className="w-full bg-white text-black font-mono px-2 py-1 border-2 border-inset border-gray-600"
+                    maxLength={15}
                 />
             </div>
-
-            <Button98 onClick={startGame} className="animate-pulse scale-105 px-6 py-2 mb-4 shrink-0">START GAME</Button98>
-
-            {/* Leaderboard Table */}
-            <div className="w-full bg-[#000080] border-2 border-white p-2">
-                <h3 className="text-center text-yellow-300 font-bold mb-2 border-b border-white pb-1 flex justify-between items-center">
-                    <span>🏆 TOP 10</span>
-                    <div className="flex items-center gap-2">
-                        {!isSupabaseConfigured && <span className="text-xs text-red-300 bg-red-900 px-1 blink">OFFLINE</span>}
-                        <Button98 
-                            onClick={fetchLeaderboard} 
-                            disabled={isLoadingLeaderboard}
-                            className="px-1 py-0 h-6 text-xs w-6 flex items-center justify-center"
-                            title="Refresh Leaderboard"
-                        >
-                            {isLoadingLeaderboard ? '...' : '🔄'}
-                        </Button98>
-                    </div>
-                </h3>
-                {isLoadingLeaderboard ? (
-                    <div className="text-center text-sm">Loading...</div>
-                ) : (
-                    <table className="w-full text-sm font-mono">
-                        <tbody>
-                            {leaderboard.map((entry, idx) => (
-                                <tr key={idx} className={idx % 2 === 0 ? 'bg-white/10' : ''}>
-                                    <td className="px-1 w-6">{idx + 1}.</td>
-                                    <td className="px-1 text-left truncate max-w-[120px]">{entry.username}</td>
-                                    <td className="px-1 text-right text-yellow-200">{entry.score}</td>
-                                </tr>
-                            ))}
-                            {leaderboard.length === 0 && (
-                                <tr><td colSpan={3} className="text-center py-2 text-gray-400">
-                                    {isSupabaseConfigured ? "No scores yet." : "Connect Supabase to see scores."}
-                                </td></tr>
-                            )}
-                        </tbody>
-                    </table>
-                )}
+            <Button98 onClick={startGame} className="scale-110 px-8 py-2 mb-6">FEED GIRAFFE</Button98>
+            <div className="w-full bg-[#1B5E20] border-2 border-white p-2 text-xs">
+                <h3 className="text-center font-bold mb-1 text-yellow-300">🌿 SAVANNA KINGS</h3>
+                <table className="w-full font-mono">
+                    <tbody>
+                        {leaderboard.map((entry, idx) => (
+                            <tr key={idx} className={idx === 0 ? 'text-yellow-300' : ''}>
+                                <td className="w-6">{idx + 1}.</td>
+                                <td className="text-left truncate">{entry.username}</td>
+                                <td className="text-right">{entry.score}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
           </div>
         )}
 
-        {/* Game Over Screen */}
         {showGameOverScreen && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-red-900/90 text-white z-10">
-            <h2 className="text-5xl font-bold mb-4 text-red-500 bg-black px-4 py-1 border-2 border-white font-['VT323']">GAME OVER</h2>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-green-900/95 text-white z-20">
+            <h2 className="text-5xl font-bold mb-4 text-yellow-500 font-['VT323']">DROPPED!</h2>
             <div className="text-center mb-6 font-mono">
-                <p className="text-xl">Score: {scoreDisplay}</p>
-                {isSubmitting && <p className="text-sm animate-pulse text-yellow-300">Saving score...</p>}
-                {!isSubmitting && !submitError && <p className="text-xs text-gray-300 mt-2">Score saved for {username}!</p>}
-                {submitError && (
-                    <div className="mt-2 bg-black border border-red-500 p-2">
-                        <p className="text-xs text-red-300 font-bold">ERROR SAVING SCORE:</p>
-                        <p className="text-xs text-red-200">{submitError}</p>
-                    </div>
-                )}
+                <p className="text-2xl">Leaves Caught: {scoreDisplay}</p>
+                {isSubmitting ? <p className="text-sm animate-pulse text-yellow-300">Syncing with forest...</p> : null}
             </div>
-            <Button98 onClick={() => {
-                setShowGameOverScreen(false);
-                setShowStartScreen(true); // Go back to start to see leaderboard
-                fetchLeaderboard();
-            }}>MAIN MENU</Button98>
+            <Button98 onClick={() => { setShowGameOverScreen(false); setShowStartScreen(true); fetchLeaderboard(); }}>REPLAY</Button98>
           </div>
         )}
       </div>
 
-      {/* Improved Mobile Controls */}
-      <div className="mt-4 flex gap-4 w-full max-w-[350px] justify-between md:hidden pb-4">
+      <div className="mt-4 flex gap-4 w-full max-w-[350px] md:hidden">
          <Button98 
-            className="flex-1 h-16 text-4xl active:bg-gray-400 flex items-center justify-center touch-none select-none" 
+            className="flex-1 h-20 text-4xl active:bg-gray-400 flex items-center justify-center touch-none" 
             onPointerDown={(e) => { e.preventDefault(); setInput('ArrowLeft', true); }}
             onPointerUp={(e) => { e.preventDefault(); setInput('ArrowLeft', false); }}
-            onPointerLeave={(e) => { e.preventDefault(); setInput('ArrowLeft', false); }}
-            onContextMenu={(e) => e.preventDefault()}
-         >
-            ⬅️
-         </Button98>
+            onPointerLeave={() => setInput('ArrowLeft', false)}
+         >⬅️</Button98>
          <Button98 
-            className="flex-1 h-16 text-4xl active:bg-gray-400 flex items-center justify-center touch-none select-none" 
+            className="flex-1 h-20 text-4xl active:bg-gray-400 flex items-center justify-center touch-none" 
             onPointerDown={(e) => { e.preventDefault(); setInput('ArrowRight', true); }}
             onPointerUp={(e) => { e.preventDefault(); setInput('ArrowRight', false); }}
-            onPointerLeave={(e) => { e.preventDefault(); setInput('ArrowRight', false); }}
-            onContextMenu={(e) => e.preventDefault()}
-         >
-            ➡️
-         </Button98>
-      </div>
-      <div className="hidden md:block mt-2 text-gray-600 font-mono text-sm">
-          Use Arrow Keys to Move
+            onPointerLeave={() => setInput('ArrowRight', false)}
+         >➡️</Button98>
       </div>
     </div>
   );

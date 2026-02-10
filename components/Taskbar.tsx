@@ -6,7 +6,7 @@ interface TaskbarProps {
   windows: WindowState[];
   activeWindowId: string | null;
   onWindowClick: (id: string) => void;
-  onStartClick: () => void;
+  onStartClick: (e: React.MouseEvent) => void;
   isStartOpen: boolean;
 }
 

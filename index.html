@@ -3,16 +3,42 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Just a penguin ($.jpeg)</title>
-    <link rel="icon" href="https://pbs.twimg.com/media/G_gCwofXsAAZ5lk?format=jpg&name=medium" />
+    <title>.gif ($.gif)</title>
+    <link rel="icon" href="https://wkkeyyrknmnynlcefugq.supabase.co/storage/v1/object/public/neww/VID_20260210_125930_387.mp4" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <script>
+      // Polyfill for process.env
+      window.process = {
+        env: {
+          NODE_ENV: 'production',
+          API_KEY: '' 
+        }
+      };
+      
+      // Critical Error Handler
+      window.onerror = function(msg, url, line, col, error) {
+        console.error("Global Error:", msg, error);
+        const root = document.getElementById('root');
+        if(root && (!root.innerHTML || root.innerHTML === '')) {
+           root.innerHTML = `
+            <div style="background:#000080; color:white; font-family:monospace; padding:20px; height:100vh;">
+                <h1 style="background:white; color:#000080; display:inline-block; padding:2px;">SYSTEM ERROR</h1>
+                <p>A fatal exception has occurred at 0x00GIF.</p>
+                <p style="color:yellow;">${msg}</p>
+                <p>Line: ${line}</p>
+                <p>Please refresh the page (F5).</p>
+            </div>
+           `;
+        }
+      };
+    </script>
     <style>
       body {
         font-family: 'VT323', monospace;
-        overflow: hidden; /* Prevent body scroll, desktop handles it */
+        overflow: hidden;
         background-color: #008080;
         background-image: url('https://static.vecteezy.com/system/resources/thumbnails/068/879/687/small_2x/pixel-art-snowy-mountain-landscape-at-night-with-stars-vector.jpg');
         background-size: cover;
@@ -27,7 +53,6 @@
         width: 100%;
         height: 100%;
       }
-      /* Custom Scrollbar for Webkit */
       ::-webkit-scrollbar {
         width: 16px;
         height: 16px;
@@ -40,23 +65,18 @@
         border: 1px solid #000;
         box-shadow: inset 1px 1px white, inset -1px -1px gray;
       }
-      ::-webkit-scrollbar-button {
-        background: #c0c0c0;
-        border: 1px solid #000;
-        box-shadow: inset 1px 1px white, inset -1px -1px gray;
-        width: 16px;
-        height: 16px;
-      }
     </style>
   <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react-dom": "https://esm.sh/react-dom@^19.2.3",
-    "recharts": "https://esm.sh/recharts@^3.7.0",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
+    "react": "https://esm.sh/react@18.2.0",
+    "react/": "https://esm.sh/react@18.2.0/",
+    "react-dom": "https://esm.sh/react-dom@18.2.0?deps=react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?deps=react@18.2.0",
+    "recharts": "https://esm.sh/recharts@2.12.3?deps=react@18.2.0,react-dom@18.2.0",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2",
+    "@google/genai": "https://esm.sh/@google/genai",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/"
   }
 }
 </script>

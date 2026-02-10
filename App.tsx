@@ -12,38 +12,38 @@ import { PaintContent } from './components/content/Paint';
 import { HowToBuyContent } from './components/content/HowToBuy';
 import { PenguinGameContent } from './components/content/PenguinGame';
 
-// App Logo
-const PENGUIN_LOGO = "https://pbs.twimg.com/media/G_gCwofXsAAZ5lk?format=jpg&name=medium";
+// New Video Logo Asset
+const MAIN_LOGO_VIDEO = "https://wkkeyyrknmnynlcefugq.supabase.co/storage/v1/object/public/neww/VID_20260210_125930_387.mp4";
 
 // Initial Windows Config
 const INITIAL_WINDOWS: WindowState[] = [
   {
     id: 'welcome',
-    title: 'Welcome.exe',
+    title: 'Welcome.gif',
     isOpen: true,
     isMinimized: false,
     zIndex: 1,
     position: { x: 50, y: 50 },
     width: 600,
     height: 500,
-    icon: <img src={PENGUIN_LOGO} alt="icon" className="w-4 h-4 object-cover" />,
+    icon: <video src={MAIN_LOGO_VIDEO} autoPlay loop muted className="w-4 h-4 object-cover" />,
     content: <AboutContent />
   },
   {
     id: 'game',
-    title: 'Penguin_Rush.exe',
+    title: 'Giraffe_Rush.exe',
     isOpen: false,
     isMinimized: false,
     zIndex: 7,
     position: { x: 250, y: 100 },
     width: 400,
     height: 550,
-    icon: '🎮',
+    icon: '🦒',
     content: <PenguinGameContent />
   },
   {
     id: 'wallet',
-    title: 'Wallet.dat',
+    title: 'Wallet.gif',
     isOpen: false,
     isMinimized: false,
     zIndex: 2,
@@ -67,7 +67,7 @@ const INITIAL_WINDOWS: WindowState[] = [
   },
   {
     id: 'gallery',
-    title: 'My Pictures',
+    title: 'My Gifs',
     isOpen: false,
     isMinimized: false,
     zIndex: 4,
@@ -109,76 +109,53 @@ const App: React.FC = () => {
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [maxZ, setMaxZ] = useState(10);
 
-  // Initial calculation for responsive layout
   useEffect(() => {
     const w = window.innerWidth;
     const h = window.innerHeight;
     const isMobile = w < 768;
     
     setWindows(prev => prev.map(win => {
-        // Calculate responsive width
         let newWidth = win.width || 400;
         let newHeight = win.height;
-        
-        if (newWidth > w - 20) {
-            newWidth = w - 20; // 10px padding each side
-        }
+        if (newWidth > w - 20) newWidth = w - 20;
 
-        // Determine Position
         let newX, newY;
-        
         if (isMobile) {
-            // Center on mobile
             newX = (w - newWidth) / 2;
-            newY = 20 + (Math.random() * 30); // Slight offset
+            newY = 20 + (Math.random() * 30);
             if (win.id === 'welcome') newY = 10;
         } else {
-            // Desktop random positioning
             newX = Math.max(0, Math.min(w - newWidth, Math.random() * (w - 400)));
             newY = Math.max(0, Math.min(h - (win.height || 400) - 50, Math.random() * (h - 500)));
         }
 
-        return {
-            ...win,
-            width: newWidth,
-            height: newHeight,
-            position: { x: newX, y: newY }
-        };
+        return { ...win, width: newWidth, height: newHeight, position: { x: newX, y: newY } };
     }));
   }, []);
 
   const handleWindowAction = (action: string, id: string, payload?: any) => {
     setWindows(prev => prev.map(w => {
       if (w.id !== id) return w;
-
       switch (action) {
         case 'OPEN':
           const newZ = maxZ + 1;
           setMaxZ(newZ);
           setActiveWindowId(id);
-          
-          // Re-center on mobile when opening if it was closed
           let pos = w.position;
           if (!w.isOpen && window.innerWidth < 768) {
               pos = { x: (window.innerWidth - (w.width || 300)) / 2, y: 20 };
           }
-
           return { ...w, isOpen: true, isMinimized: false, zIndex: newZ, position: pos };
-        case 'CLOSE':
-          return { ...w, isOpen: false };
-        case 'MINIMIZE':
-          setActiveWindowId(null);
-          return { ...w, isMinimized: true };
+        case 'CLOSE': return { ...w, isOpen: false };
+        case 'MINIMIZE': setActiveWindowId(null); return { ...w, isMinimized: true };
         case 'FOCUS':
           if (activeWindowId === id) return w;
           const focusZ = maxZ + 1;
           setMaxZ(focusZ);
           setActiveWindowId(id);
           return { ...w, zIndex: focusZ, isMinimized: false };
-        case 'MOVE':
-          return { ...w, position: payload };
-        default:
-          return w;
+        case 'MOVE': return { ...w, position: payload };
+        default: return w;
       }
     }));
   };
@@ -193,13 +170,13 @@ const App: React.FC = () => {
       <div className="absolute top-4 left-4 flex flex-col gap-6 z-0 flex-wrap h-[calc(100vh-80px)] content-start">
         <DesktopIcon 
           label="My Computer" 
-          icon={<img src={PENGUIN_LOGO} alt="icon" className="w-full h-full object-cover" />}
+          icon={<video src={MAIN_LOGO_VIDEO} autoPlay loop muted className="w-full h-full object-cover rounded-sm border border-gray-400" />}
           onDoubleClick={() => handleWindowAction('OPEN', 'welcome')} 
         />
-        
+
         <DesktopIcon 
-          label="Penguin Rush" 
-          icon="🎮" 
+          label="Giraffe Rush" 
+          icon="🦒" 
           onDoubleClick={() => handleWindowAction('OPEN', 'game')} 
         />
 
@@ -228,12 +205,12 @@ const App: React.FC = () => {
         />
         
         <DesktopIcon 
-          label="Memes" 
+          label="Gifs" 
           icon="🖼️" 
           onDoubleClick={() => handleWindowAction('OPEN', 'gallery')} 
         />
         
-        <a href="https://x.com/i/communities/2015347338366366056" target="_blank" rel="noreferrer">
+        <a href="https://x.com" target="_blank" rel="noreferrer">
              <DesktopIcon 
             label="Community" 
             icon={<div className="text-5xl font-bold font-mono">𝕏</div>}
@@ -280,7 +257,7 @@ const App: React.FC = () => {
                 handleWindowAction('MINIMIZE', id);
             }
         }}
-        onStartClick={(e: any) => {
+        onStartClick={(e: React.MouseEvent) => {
             e.stopPropagation();
             toggleStart();
         }}
