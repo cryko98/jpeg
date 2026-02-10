@@ -68,7 +68,7 @@ const INITIAL_WINDOWS: WindowState[] = [
   },
   {
     id: 'gallery',
-    title: 'My Pictures',
+    title: 'My Gifs',
     isOpen: false,
     isMinimized: false,
     zIndex: 4,
@@ -206,7 +206,7 @@ const App: React.FC = () => {
         />
         
         <DesktopIcon 
-          label="Pictures" 
+          label="Gifs" 
           icon="🖼️" 
           onDoubleClick={() => handleWindowAction('OPEN', 'gallery')} 
         />
